@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Face Recognition Login</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="container">
+    <header>
+      <div class="logo">◉</div>
+      <h1>Face Recognition Login</h1>
+      <p class="subtitle">Secure demo authentication using your webcam</p>
+    </header>
+
+    <section class="camera-card">
+      <video id="video" autoplay playsinline muted></video>
+      <canvas id="canvas" hidden></canvas>
+      <div class="camera-actions">
+        <button class="secondary" id="startCamera">Start Camera</button>
+        <span id="cameraStatus">Camera not started</span>
+      </div>
+    </section>
+
+    <section class="forms">
+      <div class="panel">
+        <h2>Create account</h2>
+        <p>Enter a username and capture 5 face samples.</p>
+        <input id="registerName" type="text" placeholder="Choose username" maxlength="24">
+        <button id="registerBtn">Capture & Register Face</button>
+      </div>
+      <div class="panel">
+        <h2>Login</h2>
+        <p>Enter your registered username and look at the camera.</p>
+        <input id="loginName" type="text" placeholder="Your username" maxlength="24">
+        <button id="loginBtn">Login with Face</button>
+      </div>
+    </section>
+    <div id="message" class="message" role="status"></div>
+    <p class="notice">Demo project only: this basic face-recognition method is not suitable for banking or high-security systems.</p>
+  </main>
+  <script>
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const message = document.getElementById("message");
+    const cameraStatus = document.getElementById("cameraStatus");
+    let stream = null;
+
+    function showMessage(text, ok=false) {
+      message.textContent = text;
+      message.className = "message " + (ok ? "success" : "error");
+    }
+
+    document.getElementById("startCamera").addEventListener("click", async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: "user"}, audio: false});
+        video.srcObject = stream;
+        cameraStatus.textContent = "Camera is ready";
+        showMessage("Camera started. Allow camera permission if your browser asks.", true);
+      } catch (error) {
+        showMessage("Camera error: " + error.message + ". Allow camera access in your browser.");
+      }
+    });
+
+    function captureFrame() {
+      if (!stream || video.readyState < 2) throw new Error("Start the camera first.");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL("image/jpeg", 0.85);
+    }
+
+    const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+    document.getElementById("registerBtn").addEventListener("click", async () => {
+      const username = document.getElementById("registerName").value.trim();
+      if (!username) return showMessage("Enter a username.");
+      try {
+        if (!stream) throw new Error("Click Start Camera first.");
+        showMessage("Capturing 5 samples. Keep your face in the camera...");
+        const form = new FormData();
+        form.append("username", username);
+        for (let i = 0; i < 5; i++) {
+          await wait(450);
+          form.append("images", captureFrame());
+        }
+        const response = await fetch("/register", {method: "POST", body: form});
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message);
+        showMessage(result.message, true);
+      } catch (error) {
+        showMessage(error.message);
+      }
+    });
+
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      const username = document.getElementById("loginName").value.trim();
+      if (!username) return showMessage("Enter your registered username.");
+      try {
+        const form = new FormData();
+        form.append("username", username);
+        form.append("image", captureFrame());
+        const response = await fetch("/login", {method: "POST", body: form});
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message);
+        showMessage(result.message + " Match distance: " + result.confidence, true);
+        window.location.href = "/dashboard";
+      } catch (error) {
+        showMessage(error.message);
+      }
+    });
+  </script>
+</body>
+</html>

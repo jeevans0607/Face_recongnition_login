@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="container dashboard">
+    <div class="logo">✓</div>
+    <h1>Login Successful!</h1>
+    <p class="subtitle">Face recognition verified your demo account.</p>
+    <div class="welcome">Welcome, <strong>{{ username }}</strong>!</div>
+    <p>You have entered the protected dashboard.</p>
+    <a class="button-link" href="{{ url_for('logout') }}">Logout</a>
+    <p class="notice">This is an educational demonstration, not production-grade authentication.</p>
+  </main>
+</body>
+</html>
